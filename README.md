@@ -1,12 +1,6 @@
-# AI-based PR reviewer and summarizer
+# RedRover - An OpenAI ChatGPT-based PR reviewer and summarizer
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<div>
-    <a href="https://github.com/coderabbitai/ai-pr-reviewer)/commits/main">
-    <img alt="GitHub" src="https://img.shields.io/github/last-commit/coderabbitai/ai-pr-reviewer/main?style=for-the-badge" height="20">
-    </a>
-    </div>
+![Screenshot 2023-05-10 at 11 26 30 AM](https://github.com/bankrate/red-rover/assets/64108082/9bd9c951-30be-46ec-a634-93ac158590e7)
 
 ## Overview
 
