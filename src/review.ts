@@ -22,7 +22,7 @@ import {getTokenCount} from './tokenizer'
 const context = github_context
 const repo = context.repo
 
-const ignoreKeyword = '@coderabbitai: ignore'
+const ignoreKeyword = '@RedRover: ignore'
 
 export const codeReview = async (
   lightBot: Bot,
@@ -340,8 +340,8 @@ ${
       const [summarizeResp] = await lightBot.chat(summarizePrompt, {})
 
       if (summarizeResp === '') {
-        info('summarize: nothing obtained from openai')
-        summariesFailed.push(`${filename} (nothing obtained from openai)`)
+        info('summarize: nothing fetched from RedRover')
+        summariesFailed.push(`${filename} (nothing fetched from RedRover)`)
         return null
       } else {
         if (options.reviewSimpleChanges === false) {
@@ -364,8 +364,8 @@ ${
         return [filename, summarizeResp, true]
       }
     } catch (e: any) {
-      warning(`summarize: error from openai: ${e as string}`)
-      summariesFailed.push(`${filename} (error from openai: ${e as string})})`)
+      warning(`summarize: error from RedRover: ${e as string}`)
+      summariesFailed.push(`${filename} (error from RedRover: ${e as string})})`)
       return null
     }
   }
@@ -405,7 +405,7 @@ ${filename}: ${summary}
         {}
       )
       if (summarizeResp === '') {
-        warning('summarize: nothing obtained from openai')
+        warning('summarize: nothing fetched from RedRover')
       } else {
         inputs.rawSummary = summarizeResp
       }
@@ -418,7 +418,7 @@ ${filename}: ${summary}
     {}
   )
   if (summarizeFinalResponse === '') {
-    info('summarize: nothing obtained from openai')
+    info('summarize: nothing fetched from RedRover')
   }
 
   if (options.disableReleaseNotes === false) {
@@ -428,9 +428,9 @@ ${filename}: ${summary}
       {}
     )
     if (releaseNotesResponse === '') {
-      info('release notes: nothing obtained from openai')
+      info('release notes: nothing fetched from RedRover')
     } else {
-      let message = '### Summary by CodeRabbit\n\n'
+      let message = '### Summary by RedRover\n\n'
       message += releaseNotesResponse
       try {
         await commenter.updateDescription(
@@ -450,26 +450,27 @@ ${filename}: ${summary}
   )
   inputs.shortSummary = summarizeShortResponse
 
-  let summarizeComment = `${summarizeFinalResponse}
-${RAW_SUMMARY_START_TAG}
-${inputs.rawSummary}
-${RAW_SUMMARY_END_TAG}
-${SHORT_SUMMARY_START_TAG}
-${inputs.shortSummary}
-${SHORT_SUMMARY_END_TAG}
+  let summarizeComment = `
+    ${summarizeFinalResponse}
+    ${RAW_SUMMARY_START_TAG}
+    ${inputs.rawSummary}
+    ${RAW_SUMMARY_END_TAG}
+    ${SHORT_SUMMARY_START_TAG}
+    ${inputs.shortSummary}
+    ${SHORT_SUMMARY_END_TAG}
+    ---
 
----
+    ### Chat with 🐶🤖 RedRover Bot (\`@RedRover\`)
+    - Reply on review comments left by this bot to ask follow-up questions. A review comment is a comment on a diff or a file.
+    - Invite the bot into a review comment chain by tagging \`@RedRover\` in a reply.
 
-<details>
-<summary>Uplevel your code reviews with CodeRabbit Pro</summary>
+    ### Code suggestions
+    - The bot may make code suggestions, but please review them carefully before committing since the line number ranges may be misaligned.
+    - You can edit the comment made by the bot and manually tweak the suggestion if it is slightly off.
 
-### CodeRabbit Pro
-
-If you like this project, please support us by purchasing the [Pro version](https://coderabbit.ai). The Pro version has advanced context, superior noise reduction and several proprietary improvements compared to the open source version.
-
-</details>
-`
-
+    ### Ignoring further reviews
+    - Type \`@RedRover: ignore\` anywhere in the PR description to ignore further reviews from the bot.
+  `
   statusMsg += `
 ${
   skippedFiles.length > 0
