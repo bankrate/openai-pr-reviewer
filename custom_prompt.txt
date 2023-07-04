@@ -1,0 +1,19 @@
+1. **Environment Variables Pattern**: This pattern is crucial for maintaining the security of the codebase by keeping sensitive data like API keys out of the codebase. It's used across multiple repositories and languages.
+
+2. **Function Decomposition Pattern**: This pattern is fundamental to good coding practice, making the code easier to read, test, and debug. It's a universal pattern that applies to any language or framework.
+
+3. **API Wrapper Pattern**: This pattern is important for interacting with APIs, providing a simple interface for the rest of the code. It's particularly relevant in repositories dealing with external APIs.
+
+4. **GitHub Actions Workflow**: This pattern is key for automating tasks like setting up environments, installing dependencies, and triggering workflows based on specific events. It's a common pattern in repositories hosted on GitHub.
+
+5. **Singleton Pattern**: This pattern is crucial for coordinating actions across the system and controlling concurrent access to resources. It's a common pattern in object-oriented programming languages.
+
+6. **Factory Pattern**: This pattern is important for creating objects, allowing for flexibility in the types of objects that can be created. It's a common pattern in object-oriented programming languages.
+
+7. **Observer Pattern**: This pattern is key for event handling, maintaining a list of dependents and notifying them of any changes. It's particularly relevant in repositories dealing with real-time data or user interactions.
+
+8. **Error Handling Pattern**: This pattern is fundamental to any codebase, ensuring that the program can handle runtime errors and continue its execution. It's a universal pattern that applies to any language or framework.
+
+Framework: The most common frameworks used across the repositories are Python (with libraries like `pandas`, `dotenv`, `tiktoken`, `openai`, and `requests`), Node.js, and GitHub Actions for CI/CD.
+
+Unique Style Preferences: The codebases generally prefer clear and descriptive variable and function names, heavily commented code for easy understanding, and the use of the DRY (Don
