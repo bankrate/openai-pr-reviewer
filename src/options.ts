@@ -8,6 +8,7 @@ export class Options {
   disableReleaseNotes: boolean
   maxFiles: number
   reviewSimpleChanges: boolean
+  lessVerboseReview: boolean
   reviewCommentLGTM: boolean
   pathFilters: PathFilter
   systemMessage: string
@@ -27,6 +28,7 @@ export class Options {
     disableReleaseNotes: boolean,
     maxFiles = '0',
     reviewSimpleChanges = false,
+    lessVerboseReview = false,
     reviewCommentLGTM = false,
     pathFilters: string[] | null = null,
     systemMessage = '',
@@ -43,6 +45,7 @@ export class Options {
     this.disableReleaseNotes = disableReleaseNotes
     this.maxFiles = parseInt(maxFiles)
     this.reviewSimpleChanges = reviewSimpleChanges
+    this.lessVerboseReview = lessVerboseReview
     this.reviewCommentLGTM = reviewCommentLGTM
     this.pathFilters = new PathFilter(pathFilters)
     this.systemMessage = systemMessage
@@ -64,6 +67,7 @@ export class Options {
     info(`disable_release_notes: ${this.disableReleaseNotes}`)
     info(`max_files: ${this.maxFiles}`)
     info(`review_simple_changes: ${this.reviewSimpleChanges}`)
+    info(`less_verbose_review: ${this.lessVerboseReview}`)
     info(`review_comment_lgtm: ${this.reviewCommentLGTM}`)
     info(`path_filters: ${this.pathFilters}`)
     info(`system_message: ${this.systemMessage}`)

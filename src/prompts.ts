@@ -42,6 +42,24 @@ You must follow the format below strictly for triaging the diff and
 do not add any additional text in your response:
 [TRIAGE]: <NEEDS_REVIEW or APPROVED>
 `
+  lessVerboseTriageFileDiff = `Below the summary, I would also like you to triage the diff as \`NEEDS_REVIEW\` or 
+\`APPROVED\` based on the following criteria:
+
+- If the diff involves any major modifications to the logic or functionality triage 
+  it as \`NEEDS_REVIEW\`. This includes changes to control structures, 
+  function calls, or variable assignments that might impact the behavior of the code.
+- If the diff contains minor changes that don't affect the code logic, such as 
+  fixing typos, formatting, or renaming variables for clarity, triage it as \`APPROVED\`.
+
+Please evaluate the diff thoroughly and take into account factors such as the number of 
+lines changed, the potential impact on the overall system, and the likelihood of 
+introducing new bugs or security vulnerabilities. 
+When in doubt, always err on the side of approving and triage the diff as \`APPROVED\`.
+
+You must follow the format below strictly for triaging the diff and 
+do not add any additional text in your response:
+[TRIAGE]: <NEEDS_REVIEW or APPROVED>
+`
   summarizeChangesets = `Provided below are changesets in this pull request. Changesets 
 are in chronlogical order and new changesets are appended to the
 end of the list. The format consists of filename(s) and the summary 
@@ -275,11 +293,15 @@ $comment
 
   renderSummarizeFileDiff(
     inputs: Inputs,
-    reviewSimpleChanges: boolean
+    reviewSimpleChanges: boolean,
+    lessVerboseReview: boolean
   ): string {
     let prompt = this.summarizeFileDiff
-    if (reviewSimpleChanges === false) {
+    if (reviewSimpleChanges === false && lessVerboseReview === false) {
       prompt += this.triageFileDiff
+    }
+    if (reviewSimpleChanges === false && lessVerboseReview === true) {
+      prompt += this.lessVerboseTriageFileDiff
     }
     return inputs.render(prompt)
   }

@@ -18,6 +18,7 @@ async function run(): Promise<void> {
     getBooleanInput('disable_release_notes'),
     getInput('max_files'),
     getBooleanInput('review_simple_changes'),
+    getBooleanInput('less_verbose_review'),
     getBooleanInput('review_comment_lgtm'),
     getMultilineInput('path_filters'),
     getInput('system_message'),

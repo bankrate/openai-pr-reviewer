@@ -266,7 +266,11 @@ ${hunks.oldHunk}
 
     // render prompt based on inputs so far
     let tokens = getTokenCount(
-      prompts.renderSummarizeFileDiff(ins, options.reviewSimpleChanges)
+      prompts.renderSummarizeFileDiff(
+        ins,
+        options.reviewSimpleChanges,
+        options.lessVerboseReview
+      )
     )
 
     const diffTokens = getTokenCount(fileDiff)
@@ -282,7 +286,11 @@ ${hunks.oldHunk}
     // summarize content
     try {
       const [summarizeResp] = await lightBot.chat(
-        prompts.renderSummarizeFileDiff(ins, options.reviewSimpleChanges),
+        prompts.renderSummarizeFileDiff(
+          ins,
+          options.reviewSimpleChanges,
+          options.lessVerboseReview
+        ),
         {}
       )
 
@@ -312,7 +320,9 @@ ${hunks.oldHunk}
       }
     } catch (e: any) {
       warning(`summarize: error from RedRover: ${e as string}`)
-      summariesFailed.push(`${filename} (error from RedRover: ${e as string})})`)
+      summariesFailed.push(
+        `${filename} (error from RedRover: ${e as string})})`
+      )
       return null
     }
   }

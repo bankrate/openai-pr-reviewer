@@ -4224,7 +4224,7 @@ __nccwpck_require__.r(__webpack_exports__);
 
 
 async function run() {
-    const options = new _options__WEBPACK_IMPORTED_MODULE_2__/* .Options */ .Ei((0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('debug'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('disable_review'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('disable_release_notes'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('max_files'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('review_simple_changes'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('review_comment_lgtm'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getMultilineInput)('path_filters'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('system_message'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_light_model'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_heavy_model'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_model_temperature'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_retries'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_timeout_ms'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_concurrency_limit'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_base_url'));
+    const options = new _options__WEBPACK_IMPORTED_MODULE_2__/* .Options */ .Ei((0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('debug'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('disable_review'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('disable_release_notes'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('max_files'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('review_simple_changes'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('less_verbose_review'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)('review_comment_lgtm'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getMultilineInput)('path_filters'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('system_message'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_light_model'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_heavy_model'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_model_temperature'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_retries'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_timeout_ms'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_concurrency_limit'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('openai_base_url'));
     // print options
     options.print();
     const prompts = new _prompts__WEBPACK_IMPORTED_MODULE_5__/* .Prompts */ .j((0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('summarize'), (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)('summarize_release_notes'));
@@ -6141,6 +6141,7 @@ class Options {
     disableReleaseNotes;
     maxFiles;
     reviewSimpleChanges;
+    lessVerboseReview;
     reviewCommentLGTM;
     pathFilters;
     systemMessage;
@@ -6153,12 +6154,13 @@ class Options {
     lightTokenLimits;
     heavyTokenLimits;
     apiBaseUrl;
-    constructor(debug, disableReview, disableReleaseNotes, maxFiles = '0', reviewSimpleChanges = false, reviewCommentLGTM = false, pathFilters = null, systemMessage = '', openaiLightModel = 'gpt-3.5-turbo', openaiHeavyModel = 'gpt-3.5-turbo', openaiModelTemperature = '0.0', openaiRetries = '3', openaiTimeoutMS = '120000', openaiConcurrencyLimit = '4', apiBaseUrl = 'https://api.openai.com/v1') {
+    constructor(debug, disableReview, disableReleaseNotes, maxFiles = '0', reviewSimpleChanges = false, lessVerboseReview = false, reviewCommentLGTM = false, pathFilters = null, systemMessage = '', openaiLightModel = 'gpt-3.5-turbo', openaiHeavyModel = 'gpt-3.5-turbo', openaiModelTemperature = '0.0', openaiRetries = '3', openaiTimeoutMS = '120000', openaiConcurrencyLimit = '4', apiBaseUrl = 'https://api.openai.com/v1') {
         this.debug = debug;
         this.disableReview = disableReview;
         this.disableReleaseNotes = disableReleaseNotes;
         this.maxFiles = parseInt(maxFiles);
         this.reviewSimpleChanges = reviewSimpleChanges;
+        this.lessVerboseReview = lessVerboseReview;
         this.reviewCommentLGTM = reviewCommentLGTM;
         this.pathFilters = new PathFilter(pathFilters);
         this.systemMessage = systemMessage;
@@ -6179,6 +6181,7 @@ class Options {
         (0,core.info)(`disable_release_notes: ${this.disableReleaseNotes}`);
         (0,core.info)(`max_files: ${this.maxFiles}`);
         (0,core.info)(`review_simple_changes: ${this.reviewSimpleChanges}`);
+        (0,core.info)(`less_verbose_review: ${this.lessVerboseReview}`);
         (0,core.info)(`review_comment_lgtm: ${this.reviewCommentLGTM}`);
         (0,core.info)(`path_filters: ${this.pathFilters}`);
         (0,core.info)(`system_message: ${this.systemMessage}`);
@@ -6299,6 +6302,24 @@ Please evaluate the diff thoroughly and take into account factors such as the nu
 lines changed, the potential impact on the overall system, and the likelihood of 
 introducing new bugs or security vulnerabilities. 
 When in doubt, always err on the side of caution and triage the diff as \`NEEDS_REVIEW\`.
+
+You must follow the format below strictly for triaging the diff and 
+do not add any additional text in your response:
+[TRIAGE]: <NEEDS_REVIEW or APPROVED>
+`;
+    lessVerboseTriageFileDiff = `Below the summary, I would also like you to triage the diff as \`NEEDS_REVIEW\` or 
+\`APPROVED\` based on the following criteria:
+
+- If the diff involves any major modifications to the logic or functionality triage 
+  it as \`NEEDS_REVIEW\`. This includes changes to control structures, 
+  function calls, or variable assignments that might impact the behavior of the code.
+- If the diff contains minor changes that don't affect the code logic, such as 
+  fixing typos, formatting, or renaming variables for clarity, triage it as \`APPROVED\`.
+
+Please evaluate the diff thoroughly and take into account factors such as the number of 
+lines changed, the potential impact on the overall system, and the likelihood of 
+introducing new bugs or security vulnerabilities. 
+When in doubt, always err on the side of approving and triage the diff as \`APPROVED\`.
 
 You must follow the format below strictly for triaging the diff and 
 do not add any additional text in your response:
@@ -6529,10 +6550,13 @@ $comment
         this.summarize = summarize;
         this.summarizeReleaseNotes = summarizeReleaseNotes;
     }
-    renderSummarizeFileDiff(inputs, reviewSimpleChanges) {
+    renderSummarizeFileDiff(inputs, reviewSimpleChanges, lessVerboseReview) {
         let prompt = this.summarizeFileDiff;
-        if (reviewSimpleChanges === false) {
+        if (reviewSimpleChanges === false && lessVerboseReview === false) {
             prompt += this.triageFileDiff;
+        }
+        if (reviewSimpleChanges === false && lessVerboseReview === true) {
+            prompt += this.lessVerboseTriageFileDiff;
         }
         return inputs.render(prompt);
     }
@@ -7055,7 +7079,7 @@ ${hunks.oldHunk}
         }
         ins.filename = filename;
         // render prompt based on inputs so far
-        let tokens = (0,tokenizer/* getTokenCount */.V)(prompts.renderSummarizeFileDiff(ins, options.reviewSimpleChanges));
+        let tokens = (0,tokenizer/* getTokenCount */.V)(prompts.renderSummarizeFileDiff(ins, options.reviewSimpleChanges, options.lessVerboseReview));
         const diffTokens = (0,tokenizer/* getTokenCount */.V)(fileDiff);
         if (tokens + diffTokens > options.lightTokenLimits.requestTokens) {
             (0,core.info)(`summarize: diff tokens exceeds limit, skip ${filename}`);
@@ -7066,7 +7090,7 @@ ${hunks.oldHunk}
         tokens += fileDiff.length;
         // summarize content
         try {
-            const [summarizeResp] = await lightBot.chat(prompts.renderSummarizeFileDiff(ins, options.reviewSimpleChanges), {});
+            const [summarizeResp] = await lightBot.chat(prompts.renderSummarizeFileDiff(ins, options.reviewSimpleChanges, options.lessVerboseReview), {});
             if (summarizeResp === '') {
                 (0,core.info)('summarize: nothing fetched from RedRover');
                 summariesFailed.push(`${filename} (nothing fetched from RedRover)`);
