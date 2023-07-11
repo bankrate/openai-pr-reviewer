@@ -325,7 +325,8 @@ ${
     // render prompt based on inputs so far
     const summarizePrompt = prompts.renderSummarizeFileDiff(
       ins,
-      options.reviewSimpleChanges
+      options.reviewSimpleChanges,
+      options.lessVerboseReview
     )
     const tokens = getTokenCount(summarizePrompt)
 
@@ -365,7 +366,9 @@ ${
       }
     } catch (e: any) {
       warning(`summarize: error from RedRover: ${e as string}`)
-      summariesFailed.push(`${filename} (error from RedRover: ${e as string})})`)
+      summariesFailed.push(
+        `${filename} (error from RedRover: ${e as string})})`
+      )
       return null
     }
   }

@@ -32,6 +32,10 @@ pull request and review comments
   changes (e.g. typo fixes) and when changes look good for the most part. It can
   be disabled by setting `review_simple_changes` and `review_comment_lgtm` to
   `true`.
+- **Less verbose reviews**: For more experienced users the Red Rover can err on 
+  side of ignoring a change unless it is a major one. This is disabled by default,
+  to enable set `review_simple_changes` to `false` and `less_verbose_review` to
+  `true`.
 - **Customizable prompts**: Tailor the `system_message`, `summarize`, and
   `summarize_release_notes` prompts to focus on specific aspects of the review
   process or even change the review objective.
