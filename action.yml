@@ -23,6 +23,10 @@ inputs:
     required: false
     description: 'Leave comments even if the patch is LGTM'
     default: 'false'
+  less_verbose_review:
+    required: false
+    description: 'Only review major issues and skip the minor ones'
+    default: 'false'
   path_filters:
     required: false
     description: |
