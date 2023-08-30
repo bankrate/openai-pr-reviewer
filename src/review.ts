@@ -649,6 +649,19 @@ ${commentChain}
               continue
             }
 
+            // If lessVerboseReview option is enabled, only post comments for major issues
+            if (
+              options.lessVerboseReview &&
+              !review.comment.includes('error') &&
+              !review.comment.includes('exception') &&
+              !review.comment.includes('critical')
+            ) {
+              info(
+                `Skipping minor issue in ${filename} lines ${review.startLine}-${review.endLine}`
+              )
+              continue
+            }
+
             try {
               reviewCount += 1
               await commenter.bufferReviewComment(
