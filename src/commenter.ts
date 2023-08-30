@@ -18,6 +18,12 @@ export const COMMENT_REPLY_TAG =
 export const SUMMARIZE_TAG =
   '<!-- This is an auto-generated comment: summarize by RedRover -->'
 
+export const IN_PROGRESS_START_TAG =
+  '<!-- This is an auto-generated comment: summarize review in progress by RedRover -->'
+
+export const IN_PROGRESS_END_TAG =
+  '<!-- end of auto-generated comment: summarize review in progress by RedRover -->'
+
 export const DESCRIPTION_START_TAG = `
 <!-- This is an auto-generated comment: release notes by RedRover -->`
 export const DESCRIPTION_END_TAG =
