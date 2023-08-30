@@ -33,6 +33,7 @@ export const codeReview = async (
   const commenter: Commenter = new Commenter()
 
   const openaiConcurrencyLimit = pLimit(options.openaiConcurrencyLimit)
+  const githubConcurrencyLimit = pLimit(options.githubConcurrencyLimit)
 
   if (
     context.eventName !== 'pull_request' &&
@@ -71,11 +72,13 @@ export const codeReview = async (
     context.payload.pull_request.number
   )
   let existingCommitIdsBlock = ''
+  let existingSummarizeCmtBody = ''
   if (existingSummarizeCmt != null) {
-    inputs.rawSummary = commenter.getRawSummary(existingSummarizeCmt.body)
-    inputs.shortSummary = commenter.getShortSummary(existingSummarizeCmt.body)
+    existingSummarizeCmtBody = existingSummarizeCmt.body
+    inputs.rawSummary = commenter.getRawSummary(existingSummarizeCmtBody)
+    inputs.shortSummary = commenter.getShortSummary(existingSummarizeCmtBody)
     existingCommitIdsBlock = commenter.getReviewedCommitIdsBlock(
-      existingSummarizeCmt.body
+      existingSummarizeCmtBody
     )
   }
 
@@ -139,13 +142,6 @@ export const codeReview = async (
     return
   }
 
-  const commits = incrementalDiff.data.commits
-
-  if (commits.length === 0) {
-    warning('Skipped: ommits is null')
-    return
-  }
-
   // skip files if they are filtered out
   const filterSelectedFiles = []
   const filterIgnoredFiles = []
@@ -158,61 +154,74 @@ export const codeReview = async (
     }
   }
 
+  if (filterSelectedFiles.length === 0) {
+    warning('Skipped: filterSelectedFiles is null')
+    return
+  }
+
+  const commits = incrementalDiff.data.commits
+
+  if (commits.length === 0) {
+    warning('Skipped: commits is null')
+    return
+  }
+
   // find hunks to review
   const filteredFiles: Array<
     [string, string, string, Array<[number, number, string]>] | null
   > = await Promise.all(
-    filterSelectedFiles.map(async file => {
-      // retrieve file contents
-      let fileContent = ''
-      if (context.payload.pull_request == null) {
-        warning('Skipped: context.payload.pull_request is null')
-        return null
-      }
-      try {
-        const contents = await octokit.repos.getContent({
-          owner: repo.owner,
-          repo: repo.repo,
-          path: file.filename,
-          ref: context.payload.pull_request.base.sha
-        })
-        if (contents.data != null) {
-          if (!Array.isArray(contents.data)) {
-            if (
-              contents.data.type === 'file' &&
-              contents.data.content != null
-            ) {
-              fileContent = Buffer.from(
-                contents.data.content,
-                'base64'
-              ).toString()
+    filterSelectedFiles.map(file =>
+      githubConcurrencyLimit(async () => {
+        // retrieve file contents
+        let fileContent = ''
+        if (context.payload.pull_request == null) {
+          warning('Skipped: context.payload.pull_request is null')
+          return null
+        }
+        try {
+          const contents = await octokit.repos.getContent({
+            owner: repo.owner,
+            repo: repo.repo,
+            path: file.filename,
+            ref: context.payload.pull_request.base.sha
+          })
+          if (contents.data != null) {
+            if (!Array.isArray(contents.data)) {
+              if (
+                contents.data.type === 'file' &&
+                contents.data.content != null
+              ) {
+                fileContent = Buffer.from(
+                  contents.data.content,
+                  'base64'
+                ).toString()
+              }
             }
           }
+        } catch (e: any) {
+          warning(
+            `Failed to get file contents: ${
+              e as string
+            }. This is OK if it's a new file.`
+          )
         }
-      } catch (e: any) {
-        warning(
-          `Failed to get file contents: ${
-            e as string
-          }. This is OK if it's a new file.`
-        )
-      }
 
-      let fileDiff = ''
-      if (file.patch != null) {
-        fileDiff = file.patch
-      }
+        let fileDiff = ''
+        if (file.patch != null) {
+          fileDiff = file.patch
+        }
 
-      const patches: Array<[number, number, string]> = []
-      for (const patch of splitPatch(file.patch)) {
-        const patchLines = patchStartEndLine(patch)
-        if (patchLines == null) {
-          continue
-        }
-        const hunks = parsePatch(patch)
-        if (hunks == null) {
-          continue
-        }
-        const hunksStr = `
+        const patches: Array<[number, number, string]> = []
+        for (const patch of splitPatch(file.patch)) {
+          const patchLines = patchStartEndLine(patch)
+          if (patchLines == null) {
+            continue
+          }
+          const hunks = parsePatch(patch)
+          if (hunks == null) {
+            continue
+          }
+          const hunksStr = `
 ---new_hunk---
 \`\`\`
 ${hunks.newHunk}
@@ -223,18 +232,24 @@ ${hunks.newHunk}
 ${hunks.oldHunk}
 \`\`\`
 `
-        patches.push([
-          patchLines.newHunk.startLine,
-          patchLines.newHunk.endLine,
-          hunksStr
-        ])
-      }
-      if (patches.length > 0) {
-        return [file.filename, fileContent, fileDiff, patches]
-      } else {
-        return null
-      }
-    })
+          patches.push([
+            patchLines.newHunk.startLine,
+            patchLines.newHunk.endLine,
+            hunksStr
+          ])
+        }
+        if (patches.length > 0) {
+          return [file.filename, fileContent, fileDiff, patches] as [
+            string,
+            string,
+            string,
+            Array<[number, number, string]>
+          ]
+        } else {
+          return null
+        }
+      })
+    )
   )
 
   // Filter out any null results
@@ -246,6 +261,48 @@ ${hunks.oldHunk}
     error('Skipped: no files to review')
     return
   }
+
+  let statusMsg = `<details>
+<summary>Commits</summary>
+Files that changed from the base of the PR and between ${highestReviewedCommitId} and ${
+    context.payload.pull_request.head.sha
+  } commits.
+</details>
+${
+  filesAndChanges.length > 0
+    ? `
+<details>
+<summary>Files selected (${filesAndChanges.length})</summary>
+
+* ${filesAndChanges
+        .map(([filename, , , patches]) => `${filename} (${patches.length})`)
+        .join('\n* ')}
+</details>
+`
+    : ''
+}
+${
+  filterIgnoredFiles.length > 0
+    ? `
+<details>
+<summary>Files ignored due to filter (${filterIgnoredFiles.length})</summary>
+
+* ${filterIgnoredFiles.map(file => file.filename).join('\n* ')}
+
+</details>
+`
+    : ''
+}
+`
+
+  // update the existing comment with in progress status
+  const inProgressSummarizeCmt = commenter.addInProgressStatus(
+    existingSummarizeCmtBody,
+    statusMsg
+  )
+
+  // add in progress status to the summarize comment
+  await commenter.comment(`${inProgressSummarizeCmt}`, SUMMARIZE_TAG, 'replace')
 
   const summariesFailed: string[] = []
 
@@ -263,36 +320,25 @@ ${hunks.oldHunk}
     }
 
     ins.filename = filename
+    ins.fileDiff = fileDiff
 
     // render prompt based on inputs so far
-    let tokens = getTokenCount(
-      prompts.renderSummarizeFileDiff(
-        ins,
-        options.reviewSimpleChanges,
-        options.lessVerboseReview
-      )
+    const summarizePrompt = prompts.renderSummarizeFileDiff(
+      ins,
+      options.reviewSimpleChanges,
+      options.lessVerboseReview
     )
+    const tokens = getTokenCount(summarizePrompt)
 
-    const diffTokens = getTokenCount(fileDiff)
-    if (tokens + diffTokens > options.lightTokenLimits.requestTokens) {
+    if (tokens > options.lightTokenLimits.requestTokens) {
       info(`summarize: diff tokens exceeds limit, skip ${filename}`)
       summariesFailed.push(`${filename} (diff tokens exceeds limit)`)
       return null
     }
 
-    ins.fileDiff = fileDiff
-    tokens += fileDiff.length
-
     // summarize content
     try {
-      const [summarizeResp] = await lightBot.chat(
-        prompts.renderSummarizeFileDiff(
-          ins,
-          options.reviewSimpleChanges,
-          options.lessVerboseReview
-        ),
-        {}
-      )
+      const [summarizeResp] = await lightBot.chat(summarizePrompt, {})
 
       if (summarizeResp === '') {
         info('summarize: nothing fetched from RedRover')
@@ -407,43 +453,28 @@ ${filename}: ${summary}
   )
   inputs.shortSummary = summarizeShortResponse
 
-  let summarizeComment = `${summarizeFinalResponse}
-${RAW_SUMMARY_START_TAG}
-${inputs.rawSummary}
-${RAW_SUMMARY_END_TAG}
-${SHORT_SUMMARY_START_TAG}
-${inputs.shortSummary}
-${SHORT_SUMMARY_END_TAG}
----
+  let summarizeComment = `
+    ${summarizeFinalResponse}
+    ${RAW_SUMMARY_START_TAG}
+    ${inputs.rawSummary}
+    ${RAW_SUMMARY_END_TAG}
+    ${SHORT_SUMMARY_START_TAG}
+    ${inputs.shortSummary}
+    ${SHORT_SUMMARY_END_TAG}
+    ---
 
 ### Chat with 🐶 RedRover Bot (\`@redrover\`)
 - Reply on review comments left by this bot to ask follow-up questions. A review comment is a comment on a diff or a file.
 - Invite the bot into a review comment chain by tagging \`@redrover\` in a reply.
 
-### Code suggestions
-- The bot may make code suggestions, but please review them carefully before committing since the line number ranges may be misaligned.
-- You can edit the comment made by the bot and manually tweak the suggestion if it is slightly off.
+    ### Code suggestions
+    - The bot may make code suggestions, but please review them carefully before committing since the line number ranges may be misaligned.
+    - You can edit the comment made by the bot and manually tweak the suggestion if it is slightly off.
 
-### Ignoring further reviews
-- Type \`@redrover: ignore\` anywhere in the PR description to ignore further reviews from the bot.
-
----
-
-${
-  filterIgnoredFiles.length > 0
-    ? `
-<details>
-<summary>Files ignored due to filter (${filterIgnoredFiles.length})</summary>
-
-### Ignored files
-
-* ${filterIgnoredFiles.map(file => file.filename).join('\n* ')}
-
-</details>
-`
-    : ''
-}
-
+    ### Ignoring further reviews
+    - Type \`@redrover: ignore\` anywhere in the PR description to ignore further reviews from the bot.
+  `
+  statusMsg += `
 ${
   skippedFiles.length > 0
     ? `
@@ -452,15 +483,12 @@ ${
         skippedFiles.length
       })</summary>
 
-### Not processed
-
 * ${skippedFiles.join('\n* ')}
 
 </details>
 `
     : ''
 }
-
 ${
   summariesFailed.length > 0
     ? `
@@ -469,8 +497,6 @@ ${
         summariesFailed.length
       })</summary>
 
-### Failed to summarize
-
 * ${summariesFailed.join('\n* ')}
 
 </details>
@@ -478,6 +504,7 @@ ${
     : ''
 }
 `
+
   if (!options.disableReview) {
     const filesAndChangesReview = filesAndChanges.filter(([filename]) => {
       const needsReview =
@@ -498,6 +525,8 @@ ${
 
     // failed reviews array
     const reviewsFailed: string[] = []
+    let lgtmCount = 0
+    let reviewCount = 0
     const doReview = async (
       filename: string,
       fileContent: string,
@@ -591,51 +620,57 @@ ${commentChain}
 `
       }
 
-      // perform review
-      try {
-        const [response] = await heavyBot.chat(
-          prompts.renderReviewFileDiff(ins),
-          {}
-        )
-        if (response === '') {
-          info('review: nothing fetched from RedRover')
-          reviewsFailed.push(`${filename} (no response)`)
-          return
-        }
-        // parse review
-        const reviews = parseReview(response, patches, options.debug)
-        for (const review of reviews) {
-          // check for LGTM
-          if (
-            !options.reviewCommentLGTM &&
-            (review.comment.includes('LGTM') ||
-              review.comment.includes('looks good to me'))
-          ) {
-            continue
+      if (patchesPacked > 0) {
+        // perform review
+        try {
+          const [response] = await heavyBot.chat(
+            prompts.renderReviewFileDiff(ins),
+            {}
+          )
+          if (response === '') {
+            info('review: nothing obtained from openai')
+            reviewsFailed.push(`${filename} (no response)`)
+            return
           }
-          if (context.payload.pull_request == null) {
-            warning('No pull request found, skipping.')
-            continue
-          }
+          // parse review
+          const reviews = parseReview(response, patches, options.debug)
+          for (const review of reviews) {
+            // check for LGTM
+            if (
+              !options.reviewCommentLGTM &&
+              (review.comment.includes('LGTM') ||
+                review.comment.includes('looks good to me'))
+            ) {
+              lgtmCount += 1
+              continue
+            }
+            if (context.payload.pull_request == null) {
+              warning('No pull request found, skipping.')
+              continue
+            }
 
-          try {
-            await commenter.bufferReviewComment(
-              filename,
-              review.startLine,
-              review.endLine,
-              `${review.comment}`
-            )
-          } catch (e: any) {
-            reviewsFailed.push(`${filename} comment failed (${e as string})`)
+            try {
+              reviewCount += 1
+              await commenter.bufferReviewComment(
+                filename,
+                review.startLine,
+                review.endLine,
+                `${review.comment}`
+              )
+            } catch (e: any) {
+              reviewsFailed.push(`${filename} comment failed (${e as string})`)
+            }
           }
+        } catch (e: any) {
+          warning(
+            `Failed to review: ${e as string}, skipping. backtrace: ${
+              e.stack as string
+            }`
+          )
+          reviewsFailed.push(`${filename} (${e as string})`)
         }
-      } catch (e: any) {
-        warning(
-          `Failed to review: ${e as string}, skipping. backtrace: ${
-            e.stack as string
-          }`
-        )
-        reviewsFailed.push(`${filename} (${e as string})`)
+      } else {
+        reviewsSkipped.push(`${filename} (diff too large)`)
       }
     }
 
@@ -654,20 +689,11 @@ ${commentChain}
 
     await Promise.all(reviewPromises)
 
-    summarizeComment += `
----
-In the recent run, only the files that changed from the \`base\` of the PR and between \`${highestReviewedCommitId}\` and \`${
-      context.payload.pull_request.head.sha
-    }\` commits were reviewed.
-
+    statusMsg += `
 ${
   reviewsFailed.length > 0
     ? `<details>
-<summary>Files not reviewed due to errors in the recent run (${
-        reviewsFailed.length
-      })</summary>
-
-### Failed to review in the last run
+<summary>Files not reviewed due to errors (${reviewsFailed.length})</summary>
 
 * ${reviewsFailed.join('\n* ')}
 
@@ -675,15 +701,12 @@ ${
 `
     : ''
 }
-
 ${
   reviewsSkipped.length > 0
     ? `<details>
-<summary>Files not reviewed due to simple changes (${
+<summary>Files skipped from review due to trivial changes (${
         reviewsSkipped.length
       })</summary>
-
-### Skipped review in the recent run
 
 * ${reviewsSkipped.join('\n* ')}
 
@@ -691,22 +714,48 @@ ${
 `
     : ''
 }
+<details>
+<summary>Review comments generated (${reviewCount + lgtmCount})</summary>
+
+* Review: ${reviewCount}
+* LGTM: ${lgtmCount}
+
+</details>
+
+---
+
+<details>
+<summary>Tips</summary>
+
+### Chat with <img src="https://avatars.githubusercontent.com/in/347564?s=41&u=fad245b8b4c7254fe63dd4dcd4d662ace122757e&v=4" alt="Image description" width="20" height="20">  CodeRabbit Bot (\`@coderabbitai\`)
+- Reply on review comments left by this bot to ask follow-up questions. A review comment is a comment on a diff or a file.
+- Invite the bot into a review comment chain by tagging \`@coderabbitai\` in a reply.
+
+### Code suggestions
+- The bot may make code suggestions, but please review them carefully before committing since the line number ranges may be misaligned. 
+- You can edit the comment made by the bot and manually tweak the suggestion if it is slightly off.
+
+### Pausing incremental reviews
+- Add \`@coderabbitai: ignore\` anywhere in the PR description to pause further reviews from the bot.
+
+</details>
 `
     // add existing_comment_ids_block with latest head sha
     summarizeComment += `\n${commenter.addReviewedCommitId(
       existingCommitIdsBlock,
       context.payload.pull_request.head.sha
     )}`
+
+    // post the review
+    await commenter.submitReview(
+      context.payload.pull_request.number,
+      commits[commits.length - 1].sha,
+      statusMsg
+    )
   }
 
   // post the final summary comment
   await commenter.comment(`${summarizeComment}`, SUMMARIZE_TAG, 'replace')
-
-  // post the review
-  await commenter.submitReview(
-    context.payload.pull_request.number,
-    commits[commits.length - 1].sha
-  )
 }
 
 const splitPatch = (patch: string | null | undefined): string[] => {
@@ -772,7 +821,6 @@ const parsePatch = (
   const oldHunkLines: string[] = []
   const newHunkLines: string[] = []
 
-  // let old_line = hunkInfo.old_hunk.start_line
   let newLine = hunkInfo.newHunk.startLine
 
   const lines = patch.split('\n').slice(1) // Skip the @@ line
@@ -782,17 +830,32 @@ const parsePatch = (
     lines.pop()
   }
 
+  // Skip annotations for the first 3 and last 3 lines
+  const skipStart = 3
+  const skipEnd = 3
+
+  let currentLine = 0
+
+  const removalOnly = !lines.some(line => line.startsWith('+'))
+
   for (const line of lines) {
+    currentLine++
     if (line.startsWith('-')) {
       oldHunkLines.push(`${line.substring(1)}`)
-      // old_line++
     } else if (line.startsWith('+')) {
       newHunkLines.push(`${newLine}: ${line.substring(1)}`)
       newLine++
     } else {
+      // context line
       oldHunkLines.push(`${line}`)
-      newHunkLines.push(`${newLine}: ${line}`)
-      // old_line++
+      if (
+        removalOnly ||
+        (currentLine > skipStart && currentLine <= lines.length - skipEnd)
+      ) {
+        newHunkLines.push(`${newLine}: ${line}`)
+      } else {
+        newHunkLines.push(`${line}`)
+      }
       newLine++
     }
   }
@@ -816,6 +879,8 @@ function parseReview(
 ): Review[] {
   const reviews: Review[] = []
 
+  response = sanitizeResponse(response.trim())
+
   const lines = response.split('\n')
   const lineNumberRangeRegex = /(?:^|\s)(\d+)-(\d+):\s*$/
   const commentSeparator = '---'
@@ -825,11 +890,10 @@ function parseReview(
   let currentComment = ''
   function storeReview(): void {
     if (currentStartLine !== null && currentEndLine !== null) {
-      const sanitizedComment = sanitizeComment(currentComment.trim())
       const review: Review = {
         startLine: currentStartLine,
         endLine: currentEndLine,
-        comment: sanitizedComment.trim()
+        comment: currentComment
       }
 
       let withinPatch = false
@@ -880,41 +944,47 @@ ${review.comment}`
     }
   }
 
-  function sanitizeComment(comment: string): string {
-    const suggestionStart = '```suggestion'
-    const suggestionEnd = '```'
+  function sanitizeCodeBlock(comment: string, codeBlockLabel: string): string {
+    const codeBlockStart = `\`\`\`${codeBlockLabel}`
+    const codeBlockEnd = '```'
     const lineNumberRegex = /^ *(\d+): /gm
 
-    let suggestionStartIndex = comment.indexOf(suggestionStart)
+    let codeBlockStartIndex = comment.indexOf(codeBlockStart)
 
-    while (suggestionStartIndex !== -1) {
-      const suggestionEndIndex = comment.indexOf(
-        suggestionEnd,
-        suggestionStartIndex + suggestionStart.length
+    while (codeBlockStartIndex !== -1) {
+      const codeBlockEndIndex = comment.indexOf(
+        codeBlockEnd,
+        codeBlockStartIndex + codeBlockStart.length
       )
 
-      if (suggestionEndIndex === -1) break
+      if (codeBlockEndIndex === -1) break
 
-      const suggestionBlock = comment.substring(
-        suggestionStartIndex + suggestionStart.length,
-        suggestionEndIndex
+      const codeBlock = comment.substring(
+        codeBlockStartIndex + codeBlockStart.length,
+        codeBlockEndIndex
       )
-      const sanitizedBlock = suggestionBlock.replace(lineNumberRegex, '')
+      const sanitizedBlock = codeBlock.replace(lineNumberRegex, '')
 
       comment =
-        comment.slice(0, suggestionStartIndex + suggestionStart.length) +
+        comment.slice(0, codeBlockStartIndex + codeBlockStart.length) +
         sanitizedBlock +
-        comment.slice(suggestionEndIndex)
+        comment.slice(codeBlockEndIndex)
 
-      suggestionStartIndex = comment.indexOf(
-        suggestionStart,
-        suggestionStartIndex +
-          suggestionStart.length +
+      codeBlockStartIndex = comment.indexOf(
+        codeBlockStart,
+        codeBlockStartIndex +
+          codeBlockStart.length +
           sanitizedBlock.length +
-          suggestionEnd.length
+          codeBlockEnd.length
       )
     }
 
+    return comment
+  }
+
+  function sanitizeResponse(comment: string): string {
+    comment = sanitizeCodeBlock(comment, 'suggestion')
+    comment = sanitizeCodeBlock(comment, 'diff')
     return comment
   }
 

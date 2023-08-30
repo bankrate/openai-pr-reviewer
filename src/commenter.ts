@@ -190,14 +190,67 @@ ${COMMENT_TAG}`
     })
   }
 
-  async submitReview(pullNumber: number, commitId: string) {
-    info(
-      `Submitting review for PR #${pullNumber}, total comments: ${this.reviewCommentsBuffer.length}`
-    )
-    let commentCounter = 0
+  async deletePendingReview(pullNumber: number) {
+    try {
+      const reviews = await octokit.pulls.listReviews({
+        owner: repo.owner,
+        repo: repo.repo,
+        // eslint-disable-next-line camelcase
+        pull_number: pullNumber
+      })
+
+      const pendingReview = reviews.data.find(
+        review => review.state === 'PENDING'
+      )
+
+      if (pendingReview) {
+        info(
+          `Deleting pending review for PR #${pullNumber} id: ${pendingReview.id}`
+        )
+        try {
+          await octokit.pulls.deletePendingReview({
+            owner: repo.owner,
+            repo: repo.repo,
+            // eslint-disable-next-line camelcase
+            pull_number: pullNumber,
+            // eslint-disable-next-line camelcase
+            review_id: pendingReview.id
+          })
+        } catch (e) {
+          warning(`Failed to delete pending review: ${e}`)
+        }
+      }
+    } catch (e) {
+      warning(`Failed to list reviews: ${e}`)
+    }
+  }
+
+  async submitReview(pullNumber: number, commitId: string, statusMsg: string) {
+    const body = `${COMMENT_GREETING}
+
+${statusMsg}
+`
+
+    if (this.reviewCommentsBuffer.length === 0) {
+      // Submit empty review with statusMsg
+      info(`Submitting empty review for PR #${pullNumber}`)
+      try {
+        await octokit.pulls.createReview({
+          owner: repo.owner,
+          repo: repo.repo,
+          // eslint-disable-next-line camelcase
+          pull_number: pullNumber,
+          // eslint-disable-next-line camelcase
+          commit_id: commitId,
+          event: 'COMMENT',
+          body
+        })
+      } catch (e) {
+        warning(`Failed to submit empty review: ${e}`)
+      }
+      return
+    }
     for (const comment of this.reviewCommentsBuffer) {
-      info(`Posting comment: ${comment.message}`)
-      let found = false
       const comments = await this.getCommentsAtRange(
         pullNumber,
         comment.path,
@@ -207,25 +260,75 @@ ${COMMENT_TAG}`
       for (const c of comments) {
         if (c.body.includes(COMMENT_TAG)) {
           info(
-            `Updating review comment for ${comment.path}:${comment.startLine}-${comment.endLine}: ${comment.message}`
+            `Deleting review comment for ${comment.path}:${comment.startLine}-${comment.endLine}: ${comment.message}`
           )
           try {
-            await octokit.pulls.updateReviewComment({
+            await octokit.pulls.deleteReviewComment({
               owner: repo.owner,
               repo: repo.repo,
               // eslint-disable-next-line camelcase
-              comment_id: c.id,
-              body: comment.message
+              comment_id: c.id
             })
           } catch (e) {
-            warning(`Failed to update review comment: ${e}`)
+            warning(`Failed to delete review comment: ${e}`)
           }
-          found = true
-          break
         }
       }
+    }
 
-      if (!found) {
+    await this.deletePendingReview(pullNumber)
+
+    const generateCommentData = (comment: any) => {
+      const commentData: any = {
+        path: comment.path,
+        body: comment.message,
+        line: comment.endLine
+      }
+
+      if (comment.startLine !== comment.endLine) {
+        // eslint-disable-next-line camelcase
+        commentData.start_line = comment.startLine
+        // eslint-disable-next-line camelcase
+        commentData.start_side = 'RIGHT'
+      }
+
+      return commentData
+    }
+
+    try {
+      const review = await octokit.pulls.createReview({
+        owner: repo.owner,
+        repo: repo.repo,
+        // eslint-disable-next-line camelcase
+        pull_number: pullNumber,
+        // eslint-disable-next-line camelcase
+        commit_id: commitId,
+        comments: this.reviewCommentsBuffer.map(comment =>
+          generateCommentData(comment)
+        )
+      })
+
+      info(
+        `Submitting review for PR #${pullNumber}, total comments: ${this.reviewCommentsBuffer.length}, review id: ${review.data.id}`
+      )
+
+      await octokit.pulls.submitReview({
+        owner: repo.owner,
+        repo: repo.repo,
+        // eslint-disable-next-line camelcase
+        pull_number: pullNumber,
+        // eslint-disable-next-line camelcase
+        review_id: review.data.id,
+        event: 'COMMENT',
+        body
+      })
+    } catch (e) {
+      warning(
+        `Failed to create review: ${e}. Falling back to individual comments.`
+      )
+      await this.deletePendingReview(pullNumber)
+      let commentCounter = 0
+      for (const comment of this.reviewCommentsBuffer) {
         info(
           `Creating new review comment for ${comment.path}:${comment.startLine}-${comment.endLine}: ${comment.message}`
         )
@@ -236,28 +339,20 @@ ${COMMENT_TAG}`
           pull_number: pullNumber,
           // eslint-disable-next-line camelcase
           commit_id: commitId,
-          body: comment.message,
-          path: comment.path,
-          line: comment.endLine
+          ...generateCommentData(comment)
         }
 
-        if (comment.startLine !== comment.endLine) {
-          // eslint-disable-next-line camelcase
-          commentData.start_side = 'RIGHT'
-          // eslint-disable-next-line camelcase
-          commentData.start_line = comment.startLine
-        }
         try {
           await octokit.pulls.createReviewComment(commentData)
-        } catch (e) {
-          warning(`Failed to create review comment: ${e}`)
+        } catch (ee) {
+          warning(`Failed to create review comment: ${ee}`)
         }
-      }
 
-      commentCounter++
-      info(
-        `Comment ${commentCounter}/${this.reviewCommentsBuffer.length} posted`
-      )
+        commentCounter++
+        info(
+          `Comment ${commentCounter}/${this.reviewCommentsBuffer.length} posted`
+        )
+      }
     }
   }
 
@@ -483,14 +578,20 @@ ${chain}
 
   async create(body: string, target: number) {
     try {
-      // get commend ID from the response
-      await octokit.issues.createComment({
+      // get comment ID from the response
+      const response = await octokit.issues.createComment({
         owner: repo.owner,
         repo: repo.repo,
         // eslint-disable-next-line camelcase
         issue_number: target,
         body
       })
+      // add comment to issueCommentsCache
+      if (this.issueCommentsCache[target]) {
+        this.issueCommentsCache[target].push(response.data)
+      } else {
+        this.issueCommentsCache[target] = [response.data]
+      }
     } catch (e) {
       warning(`Failed to create comment: ${e}`)
     }
@@ -644,5 +745,42 @@ ${chain}
     }
 
     return allCommits
+  }
+
+  // add in-progress status to the comment body
+  addInProgressStatus(commentBody: string, statusMsg: string): string {
+    const start = commentBody.indexOf(IN_PROGRESS_START_TAG)
+    const end = commentBody.indexOf(IN_PROGRESS_END_TAG)
+    // add to the beginning of the comment body if the marker doesn't exist
+    // otherwise do nothing
+    if (start === -1 || end === -1) {
+      return `${IN_PROGRESS_START_TAG}
+
+Currently reviewing new changes in this PR...
+
+${statusMsg}
+
+${IN_PROGRESS_END_TAG}
+
+---
+
+${commentBody}`
+    }
+    return commentBody
+  }
+
+  // remove in-progress status from the comment body
+  removeInProgressStatus(commentBody: string): string {
+    const start = commentBody.indexOf(IN_PROGRESS_START_TAG)
+    const end = commentBody.indexOf(IN_PROGRESS_END_TAG)
+    // remove the in-progress status if the marker exists
+    // otherwise do nothing
+    if (start !== -1 && end !== -1) {
+      return (
+        commentBody.substring(0, start) +
+        commentBody.substring(end + IN_PROGRESS_END_TAG.length)
+      )
+    }
+    return commentBody
   }
 }

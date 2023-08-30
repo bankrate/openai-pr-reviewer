@@ -4,13 +4,17 @@
 
 ## Overview
 
-This [OpenAI ChatGPT-based](https://platform.openai.com/docs/guides/chat) GitHub
-Action provides a summary, release notes and review of pull requests. The unique
-features of this action are:
+RedRover is an AI-based code reviewer and summarizer for
+GitHub pull requests using OpenAI's `gpt-3.5-turbo` and `gpt-4` models. It is
+designed to be used as a GitHub Action and can be configured to run on every
+pull request and review comments
 
-- **Line-by-line code change suggestions**: This action reviews the changes line
-  by line and provides code change suggestions that can be directly committed
-  from the GitHub UI.
+## Reviewer Features:
+
+- **PR Summarization**: It generates a summary and release notes of the changes
+  in the pull request.
+- **Line-by-line code change suggestions**: Reviews the changes line by line and
+  provides code change suggestions.
 - **Continuous, incremental reviews**: Reviews are performed on each commit
   within a pull request, rather than a one-time review on the entire pull
   request.
@@ -36,10 +40,23 @@ features of this action are:
   `summarize_release_notes` prompts to focus on specific aspects of the review
   process or even change the review objective.
 
-## Usage
+To use this tool, you need to add the provided YAML file to your repository and
+configure the required environment variables, such as `GITHUB_TOKEN` and
+`OPENAI_API_KEY`. For more information on usage, examples, and development 
+you can refer to the sections below.
 
-Add the below file to your repository at
-`.github/workflows/redrover-review.yml`
+- [Overview](#overview)
+- [Professional Version of RedRover](#professional-version-of-RedRover)
+- [Reviewer Features](#reviewer-features)
+- [Install instructions](#install-instructions)
+- [Conversation with RedRover](#conversation-with-RedRover)
+- [Examples](#examples)
+- [Developing](#developing)
+
+## Install instructions
+
+RedRover runs as a GitHub Action. Add the below file to your repository
+at `.github/workflows/redrover-review.yml`
 
 ```yaml
 name: RedRover Reviewer
@@ -74,39 +91,6 @@ jobs:
           review_comment_lgtm: false
 ```
 
-### Conversation with OpenAI
-
-You can reply to a review comment made by this action and get a response based
-on the diff context. Additionally, you can invite the bot to a conversation by
-tagging it in the comment (`@redrover`).
-
-Example:
-
-> @redrover Please generate a test plan for this file.
-
-Note: A review comment is a comment made on a diff or a file in the pull
-request.
-
-### Ignoring PRs
-
-Sometimes it is useful to ignore a PR. For example, if you are using this action
-to review documentation, you can ignore PRs that only change the documentation.
-To ignore a PR, add the following keyword in the PR description:
-
-```text
-'@redrover: ignore'
-```
-
-### Screenshots
-
-![PR Summary](./docs/images/openai-pr-summary.png)
-
-![PR Release Notes](./docs/images/openai-pr-release-notes.png)
-
-![PR Review](./docs/images/openai-pr-review.png)
-
-![PR Conversation](./docs/images/openai-review-conversation.png)
-
 #### Environment variables
 
 - `GITHUB_TOKEN`: This should already be available to the GitHub Action
@@ -120,7 +104,7 @@ To ignore a PR, add the following keyword in the PR description:
 
 ### Models: `gpt-4` and `gpt-3.5-turbo`
 
-At FluxNinja, we use `gpt-3.5-turbo` for lighter tasks such as summarizing the
+Recommend using `gpt-3.5-turbo` for lighter tasks such as summarizing the
 changes (`openai_light_model` in configuration) and `gpt-4` for more complex
 review and commenting tasks (`openai_heavy_model` in configuration).
 
@@ -146,14 +130,8 @@ system_message: |
   infrastructure.
 
   Company context -
-  FluxNinja is a cloud-native intelligent load management platform.
-  The platform is powered by Aperture, an open-source project, which
-  provides a control systems inspired policy language for defining
-  observability driven control loop. FluxNinja's load management,
-  such as prioritized load shedding and load-based autoscaling,
-  ensures system stability. FluxNinja ARC, the commercial solution,
-  offers advanced analytics, intelligent alerting, and policy
-  visualization.
+  RedRover is an AI-powered Code reviewer.It boosts code quality and cuts manual effort. Offers context-aware, line-by-line feedback, highlights critical changes,
+  enables bot interaction, and lets you commit suggestions directly from GitHub.
 
   When reviewing or generating content focus on key areas such as -
   - Accuracy
@@ -173,13 +151,48 @@ system_message: |
 
 </details>
 
+## Conversation with RedRover
+
+You can reply to a review comment made by this action and get a response based
+on the diff context. Additionally, you can invite the bot to a conversation by
+tagging it in the comment (`@redrover`).
+
+Example:
+
+> @redrover Please generate a test plan for this file.
+
+Note: A review comment is a comment made on a diff or a file in the pull
+request.
+
+### Ignoring PRs
+
+Sometimes it is useful to ignore a PR. For example, if you are using this action
+to review documentation, you can ignore PRs that only change the documentation.
+To ignore a PR, add the following keyword in the PR description:
+
+```text
+@redrover: ignore
+```
+
+## Examples
+
+Some of the reviews done by ai-pr-reviewer
+
+![PR Summary](./docs/images/openai-pr-summary.png)
+
+![PR Release Notes](./docs/images/openai-pr-release-notes.png)
+
+![PR Review](./docs/images/openai-pr-review.png)
+
+![PR Conversation](./docs/images/openai-review-conversation.png)
+
 Any suggestions or pull requests for improving the prompts are highly
 appreciated.
 
-## Developing
+### Developing
 
 > First, you'll need to have a reasonably modern version of `node` handy, tested
-> with node 16.
+> with node 17+.
 
 Install the dependencies
 
@@ -192,52 +205,6 @@ Build the typescript and package it for distribution
 ```bash
 $ npm run build && npm run package
 ```
-
-## FAQs
-
-### Review pull requests from forks
-
-GitHub Actions limits the access of secrets from forked repositories. To enable
-this feature, you need to use the `pull_request_target` event instead of
-`pull_request` in your workflow file. Note that with `pull_request_target`, you
-need extra configuration to ensure checking out the right commit:
-
-```yaml
-name: Code Review
-
-permissions:
-  contents: read
-  pull-requests: write
-
-on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
-  pull_request_review_comment:
-    types: [created]
-
-concurrency:
-  group:
-    ${{ github.repository }}-${{ github.event.number || github.head_ref ||
-    github.sha }}-${{ github.workflow }}-${{ github.event_name ==
-    'pull_request_review_comment' && 'pr_comment' || 'pr' }}
-  cancel-in-progress: ${{ github.event_name != 'pull_request_review_comment' }}
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: fluxninja/openai-pr-reviewer@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        with:
-          debug: false
-          review_simple_changes: false
-          review_comment_lgtm: false
-```
-
-See also:
-https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
 
 ### Inspect the messages between OpenAI server
 
