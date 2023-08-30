@@ -472,7 +472,7 @@ ${filename}: ${summary}
     - You can edit the comment made by the bot and manually tweak the suggestion if it is slightly off.
 
     ### Ignoring further reviews
-    - Type \`@RedRover: ignore\` anywhere in the PR description to ignore further reviews from the bot.
+    - Type \`@redrover: ignore\` anywhere in the PR description to ignore further reviews from the bot.
   `
   statusMsg += `
 ${
