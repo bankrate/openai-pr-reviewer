@@ -37,3 +37,5 @@ jobs:
             !dist/**
             !**/*.lock
           system_message: ${{ steps.file.outputs.content }}
+          poem_enabled: true
+          less_verbose_review: false
