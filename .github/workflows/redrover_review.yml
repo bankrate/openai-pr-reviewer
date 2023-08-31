@@ -31,10 +31,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           debug: true
+          poem_enabled: true
+          less_verbose_review: false
           review_comment_lgtm: false
           openai_heavy_model: gpt-4
           path_filters: |
             !dist/**
             !**/*.lock
-          system_message: ${{ steps.file.outputs.content }}
-          poem_enabled: true
+          system_message: ${{ steps.file.outputs.content }}   
