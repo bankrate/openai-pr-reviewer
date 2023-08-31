@@ -3633,16 +3633,12 @@ const IN_PROGRESS_END_TAG = '<!-- end of auto-generated comment: summarize revie
 const DESCRIPTION_START_TAG = `
 <!-- This is an auto-generated comment: release notes by RedRover -->`;
 const DESCRIPTION_END_TAG = '<!-- end of auto-generated comment: release notes by RedRover -->';
-const RAW_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: raw summary by RedRover -->
-<!--
+const RAW_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: raw summary by RedRover --><!--
 `;
-const RAW_SUMMARY_END_TAG = `-->
-<!-- end of auto-generated comment: raw summary by RedRover -->`;
-const SHORT_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: short summary by RedRover -->
-<!--
+const RAW_SUMMARY_END_TAG = `--><!-- end of auto-generated comment: raw summary by RedRover -->`;
+const SHORT_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: short summary by RedRover --><!--
 `;
-const SHORT_SUMMARY_END_TAG = `-->
-<!-- end of auto-generated comment: short summary by RedRover -->`;
+const SHORT_SUMMARY_END_TAG = `--><!-- end of auto-generated comment: short summary by RedRover -->`;
 const COMMIT_ID_START_TAG = '<!-- commit_ids_reviewed_start -->';
 const COMMIT_ID_END_TAG = '<!-- commit_ids_reviewed_end -->';
 class Commenter {

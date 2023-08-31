@@ -29,18 +29,13 @@ export const DESCRIPTION_START_TAG = `
 export const DESCRIPTION_END_TAG =
   '<!-- end of auto-generated comment: release notes by RedRover -->'
 
-export const RAW_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: raw summary by RedRover -->
-<!--
+export const RAW_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: raw summary by RedRover --><!--
 `
-export const RAW_SUMMARY_END_TAG = `-->
-<!-- end of auto-generated comment: raw summary by RedRover -->`
+export const RAW_SUMMARY_END_TAG = `--><!-- end of auto-generated comment: raw summary by RedRover -->`
 
-export const SHORT_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: short summary by RedRover -->
-<!--
+export const SHORT_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: short summary by RedRover --><!--
 `
-
-export const SHORT_SUMMARY_END_TAG = `-->
-<!-- end of auto-generated comment: short summary by RedRover -->`
+export const SHORT_SUMMARY_END_TAG = `--><!-- end of auto-generated comment: short summary by RedRover -->`
 
 export const COMMIT_ID_START_TAG = '<!-- commit_ids_reviewed_start -->'
 export const COMMIT_ID_END_TAG = '<!-- commit_ids_reviewed_end -->'
