@@ -453,15 +453,14 @@ ${filename}: ${summary}
   )
   inputs.shortSummary = summarizeShortResponse
 
-  let summarizeComment = `
-    ${summarizeFinalResponse}
-    ${RAW_SUMMARY_START_TAG}
-    ${inputs.rawSummary}
-    ${RAW_SUMMARY_END_TAG}
-    ${SHORT_SUMMARY_START_TAG}
-    ${inputs.shortSummary}
-    ${SHORT_SUMMARY_END_TAG}
-  `
+  let summarizeComment = `${summarizeFinalResponse}
+${RAW_SUMMARY_START_TAG}
+${inputs.rawSummary}
+${RAW_SUMMARY_END_TAG}
+${SHORT_SUMMARY_START_TAG}
+${inputs.shortSummary}
+${SHORT_SUMMARY_END_TAG}
+`
   statusMsg += `
 ${
   skippedFiles.length > 0

@@ -7323,15 +7323,14 @@ ${filename}: ${summary}
     // generate a short summary as well
     const [summarizeShortResponse] = await heavyBot.chat(prompts.renderSummarizeShort(inputs), {});
     inputs.shortSummary = summarizeShortResponse;
-    let summarizeComment = `
-    ${summarizeFinalResponse}
-    ${lib_commenter/* RAW_SUMMARY_START_TAG */.oi}
-    ${inputs.rawSummary}
-    ${lib_commenter/* RAW_SUMMARY_END_TAG */.rV}
-    ${lib_commenter/* SHORT_SUMMARY_START_TAG */.O$}
-    ${inputs.shortSummary}
-    ${lib_commenter/* SHORT_SUMMARY_END_TAG */.Zb}
-  `;
+    let summarizeComment = `${summarizeFinalResponse}
+${lib_commenter/* RAW_SUMMARY_START_TAG */.oi}
+${inputs.rawSummary}
+${lib_commenter/* RAW_SUMMARY_END_TAG */.rV}
+${lib_commenter/* SHORT_SUMMARY_START_TAG */.O$}
+${inputs.shortSummary}
+${lib_commenter/* SHORT_SUMMARY_END_TAG */.Zb}
+`;
     statusMsg += `
 ${skippedFiles.length > 0
         ? `
