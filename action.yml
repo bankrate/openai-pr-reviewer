@@ -212,10 +212,10 @@ inputs:
     default: |
       Provide your final response in markdown with the following content:
 
-      - **Walkthrough**: A high-level summary of the overall change instead of 
-        specific files within 80 words.
-      - **Changes**: A markdown table of files and their summaries. Group files 
-        with similar changes together into a single row to save space.
+      **Walkthrough**: A high-level summary of the overall change instead of 
+      specific files within 80 words.
+      **Changes**: A markdown table of files and their summaries. Group files 
+      with similar changes together into a single row to save space.
 
       Avoid additional commentary as this summary will be added as a comment on the 
       GitHub pull request. Use the titles "Walkthrough" and "Changes" and they must be H2.
