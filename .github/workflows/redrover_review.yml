@@ -37,3 +37,4 @@ jobs:
             !dist/**
             !**/*.lock
           system_message: ${{ steps.file.outputs.content }}
+          poem_enabled: true
