@@ -3,6 +3,8 @@ import {type Inputs} from './inputs'
 export class Prompts {
   summarize: string
   summarizeReleaseNotes: string
+  poemEnabled: boolean
+  poem: string
 
   summarizeFileDiff = `## GitHub PR Title
 
@@ -259,9 +261,16 @@ $comment
 \`\`\`
 `
 
-  constructor(summarize = '', summarizeReleaseNotes = '') {
+  constructor(
+    summarize = '',
+    summarizeReleaseNotes = '',
+    poemEnabled = false,
+    poem = ''
+  ) {
     this.summarize = summarize
     this.summarizeReleaseNotes = summarizeReleaseNotes
+    this.poemEnabled = poemEnabled
+    this.poem = poem
   }
 
   renderSummarizeFileDiff(
@@ -284,7 +293,10 @@ $comment
   }
 
   renderSummarize(inputs: Inputs): string {
-    const prompt = this.summarizePrefix + this.summarize
+    let prompt = this.summarizePrefix + this.summarize
+    if (this.poemEnabled) {
+      prompt += this.poem
+    }
     return inputs.render(prompt)
   }
 

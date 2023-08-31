@@ -38,7 +38,9 @@ async function run(): Promise<void> {
 
   const prompts: Prompts = new Prompts(
     getInput('summarize'),
-    getInput('summarize_release_notes')
+    getInput('summarize_release_notes'),
+    getBooleanInput('poem_enabled'),
+    getInput('poem')
   )
 
   // Create two bots, one for summary and one for review
