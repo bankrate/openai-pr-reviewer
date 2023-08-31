@@ -30,7 +30,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BANKRATE_BOT_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
-          debug: true
+          debug: false
           poem_enabled: true
           less_verbose_review: false
           review_comment_lgtm: false
