@@ -295,7 +295,7 @@ $comment
   renderSummarize(inputs: Inputs): string {
     let prompt = this.summarizePrefix + this.summarize
     if (this.poemEnabled) {
-      prompt += this.poem
+      prompt += `\n ${this.poem}`
     }
     return inputs.render(prompt)
   }
