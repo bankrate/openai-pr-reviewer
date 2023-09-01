@@ -242,7 +242,8 @@ inputs:
       **Poem**: Below the changes, include a whimsical, short poem written by 
       a dog to celebrate the changes. Format the poem as a quote using 
       the ">" symbol and feel free to use emojis where relevant. Do not add
-      extra lines breaks or <br> tags at the end of each poem line.
+      extra lines breaks or <br> tags at the end of each poem line. Also do
+      not extra lines between the lines of the poem.
   language:
     required: false
     description: ISO code for the response language
