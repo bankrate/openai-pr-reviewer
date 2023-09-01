@@ -3630,10 +3630,10 @@ const COMMENT_REPLY_TAG = '<!-- This is an auto-generated reply by RedRover -->'
 const SUMMARIZE_TAG = '<!-- This is an auto-generated comment: summarize by RedRover -->';
 const IN_PROGRESS_START_TAG = '<!-- This is an auto-generated comment: summarize review in progress by RedRover -->';
 const IN_PROGRESS_END_TAG = '<!-- end of auto-generated comment: summarize review in progress by RedRover -->';
-const DESCRIPTION_START_TAG = `
-<!-- This is an auto-generated comment: release notes by RedRover -->`;
+const DESCRIPTION_START_TAG = `<!-- This is an auto-generated comment: release notes by RedRover -->`;
 const DESCRIPTION_END_TAG = '<!-- end of auto-generated comment: release notes by RedRover -->';
-const RAW_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: raw summary by RedRover --><!--
+const RAW_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: raw summary by RedRover -->
+<!--
 `;
 const RAW_SUMMARY_END_TAG = `--><!-- end of auto-generated comment: raw summary by RedRover -->`;
 const SHORT_SUMMARY_START_TAG = `<!-- This is an auto-generated comment: short summary by RedRover --><!--
@@ -3686,7 +3686,7 @@ ${tag}`;
     }
     removeContentWithinTags(content, startTag, endTag) {
         const start = content.indexOf(startTag);
-        const end = content.indexOf(endTag);
+        const end = content.lastIndexOf(endTag);
         if (start >= 0 && end >= 0) {
             return content.slice(0, start) + content.slice(end + endTag.length);
         }
@@ -3722,7 +3722,7 @@ ${tag}`;
             }
             const description = this.getDescription(body);
             const messageClean = this.removeContentWithinTags(message, DESCRIPTION_START_TAG, DESCRIPTION_END_TAG);
-            const newDescription = `${description}${DESCRIPTION_START_TAG}\n${messageClean}\n${DESCRIPTION_END_TAG}`;
+            const newDescription = `${description}\n${DESCRIPTION_START_TAG}\n${messageClean}\n${DESCRIPTION_END_TAG}`;
             await _octokit__WEBPACK_IMPORTED_MODULE_2__/* .octokit.pulls.update */ .K.pulls.update({
                 owner: repo.owner,
                 repo: repo.repo,

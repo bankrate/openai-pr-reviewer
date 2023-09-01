@@ -24,8 +24,8 @@ export const IN_PROGRESS_START_TAG =
 export const IN_PROGRESS_END_TAG =
   '<!-- end of auto-generated comment: summarize review in progress by RedRover -->'
 
-export const DESCRIPTION_START_TAG = `
-<!-- This is an auto-generated comment: release notes by RedRover -->`
+export const DESCRIPTION_START_TAG = `<!-- This is an auto-generated comment: release notes by RedRover -->`
+
 export const DESCRIPTION_END_TAG =
   '<!-- end of auto-generated comment: release notes by RedRover -->'
 
@@ -88,7 +88,7 @@ ${tag}`
 
   removeContentWithinTags(content: string, startTag: string, endTag: string) {
     const start = content.indexOf(startTag)
-    const end = content.indexOf(endTag)
+    const end = content.lastIndexOf(endTag)
     if (start >= 0 && end >= 0) {
       return content.slice(0, start) + content.slice(end + endTag.length)
     }
@@ -150,7 +150,7 @@ ${tag}`
         DESCRIPTION_START_TAG,
         DESCRIPTION_END_TAG
       )
-      const newDescription = `${description}${DESCRIPTION_START_TAG}\n${messageClean}\n${DESCRIPTION_END_TAG}`
+      const newDescription = `${description}\n${DESCRIPTION_START_TAG}\n${messageClean}\n${DESCRIPTION_END_TAG}`
       await octokit.pulls.update({
         owner: repo.owner,
         repo: repo.repo,
