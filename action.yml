@@ -249,5 +249,5 @@ inputs:
     description: ISO code for the response language
     default: en-US
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
